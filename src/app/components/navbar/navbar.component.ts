@@ -13,7 +13,7 @@ import { CommonModule } from '@angular/common';
 export class NavbarComponent {
 
   isLoggedIn = signal<boolean>(false);
-  name: string | null = sessionStorage.getItem('name');
+  name = signal<string|null>(sessionStorage.getItem('name'));
 
   constructor(private authService: AuthService,
     private router: Router

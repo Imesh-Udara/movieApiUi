@@ -1,6 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, signal, WritableSignal } from '@angular/core';
-import { Observable, tap } from 'rxjs';
+import { jwtDecode } from 'jwt-decode';
+import { catchError, Observable, tap, throwError } from 'rxjs';
 
 @Injectable({
   providedIn: 'root'
@@ -32,7 +33,8 @@ export class AuthService {
   }
 
   isAuthenticated(): boolean {
-    return !!sessionStorage.getItem('accessToken');
+    const token = sessionStorage.getItem('accessToken');
+    return token!= null && !this.isTokenExpired(token);
   }
 
   logout(): void {
@@ -49,6 +51,25 @@ export class AuthService {
 
   getLoggedIn(): WritableSignal<boolean> {
     return this.loggedIn;
+  }
+
+  isTokenExpired(token: string): boolean {
+    const decodedToken: any = jwtDecode(token);
+    return (decodedToken.exp * 1000) < Date.now();
+  }
+
+  refreshToken(): Observable<any> {
+    const refToken = sessionStorage.getItem('refreshToken');
+    const rtobj: RefreshTokenRequest = {
+      refreshToken: refToken
+    }
+    return this.http.post(`${this.BASE_URL}/api/v1/auth/refresh`, {rtobj}).pipe(
+      tap((res:any) => sessionStorage.setItem('accessToken', res.accessToken)),
+      catchError(err => {
+        this.logout();
+        return throwError(() => err);
+      })
+    )
   }
 }
 
@@ -70,4 +91,8 @@ export type AuthResponse = {
 export type LoginRequest = {
   email: string,
   password: string
+}
+
+export type RefreshTokenRequest = {
+  refreshToken: string | null,
 }
